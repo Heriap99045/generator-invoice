@@ -122,6 +122,9 @@ input[type=text],input[type=number],input[type=date],textarea,select{
 textarea{resize:vertical;min-height:64px}
 input[type=file]{font:inherit;font-size:13px;max-width:100%}
 :focus-visible{outline:2px solid var(--accent-strong);outline-offset:1px}
+.is-sample{color:var(--muted)}
+::placeholder{color:var(--muted);opacity:.7}
+input:focus::placeholder,textarea:focus::placeholder{color:transparent}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .disc{display:grid;grid-template-columns:1fr 92px;gap:8px}
 .help{color:var(--muted);font-size:12.5px;margin:4px 0 0}
@@ -568,6 +571,29 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
     notes: 'Terima kasih atas kepercayaannya. Mohon lakukan pembayaran sebelum tanggal jatuh tempo.'
   };
 
+  var SAMPLE_FIELDS = {
+    bizName: SAMPLE.bizName,
+    bizAddress: SAMPLE.bizAddress,
+    bizContact: SAMPLE.bizContact,
+    payInfo: SAMPLE.payInfo,
+    notes: SAMPLE.notes,
+    clientName: 'PT Maju Bersama',
+    clientAddress: 'Jl. Contoh Raya No. 88, Jakarta'
+  };
+
+  /* Teks contoh tampil samar; saat kolom diklik, isinya otomatis kosong.
+     Teks contoh tetap tampil sebagai petunjuk (placeholder) bila kolom dibiarkan kosong. */
+  function markSamples(){
+    Object.keys(SAMPLE_FIELDS).forEach(function(id){
+      var el = $(id);
+      el.placeholder = SAMPLE_FIELDS[id];
+      el.classList.toggle('is-sample', el.value === SAMPLE_FIELDS[id]);
+    });
+  }
+  function unmark(ids){
+    ids.forEach(function(id){ $(id).classList.remove('is-sample'); });
+  }
+
   var nf = new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:0});
   var qf = new Intl.NumberFormat('id-ID', {maximumFractionDigits:2});
 
@@ -673,21 +699,30 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
       var row = document.createElement('div');
       row.className = 'item';
 
-      var d = mk('input', 'd', 'text');
-      d.value = it.d; d.placeholder = 'Deskripsi item';
+      var d = mk('input', 'd' + (it.sd ? ' is-sample' : ''), 'text');
+      d.value = it.d; d.placeholder = it.hd || 'Deskripsi item';
       d.setAttribute('aria-label', 'Deskripsi item ' + (i + 1));
-      d.addEventListener('input', function(){ it.d = d.value; update(); });
+      d.addEventListener('focus', function(){
+        if (it.sd) { it.sd = false; it.d = ''; d.value = ''; d.classList.remove('is-sample'); update(); }
+      });
+      d.addEventListener('input', function(){ it.sd = false; d.classList.remove('is-sample'); it.d = d.value; update(); });
 
-      var q = mk('input', 'q', 'number');
-      q.min = '0'; q.step = 'any'; q.value = it.q; q.placeholder = 'Jumlah';
+      var q = mk('input', 'q' + (it.sq ? ' is-sample' : ''), 'number');
+      q.min = '0'; q.step = 'any'; q.value = it.q; q.placeholder = it.hq || 'Jumlah';
       q.setAttribute('aria-label', 'Jumlah item ' + (i + 1));
-      q.addEventListener('input', function(){ it.q = q.value; update(); });
+      q.addEventListener('focus', function(){
+        if (it.sq) { it.sq = false; it.q = ''; q.value = ''; q.classList.remove('is-sample'); update(); }
+      });
+      q.addEventListener('input', function(){ it.sq = false; q.classList.remove('is-sample'); it.q = q.value; update(); });
 
-      var p = mk('input', 'p', 'number');
-      p.min = '0'; p.step = 'any'; p.value = it.p; p.placeholder = 'Harga satuan (Rp)';
+      var p = mk('input', 'p' + (it.sp ? ' is-sample' : ''), 'number');
+      p.min = '0'; p.step = 'any'; p.value = it.p; p.placeholder = it.hp || 'Harga satuan (Rp)';
       p.setAttribute('inputmode', 'decimal');
       p.setAttribute('aria-label', 'Harga satuan item ' + (i + 1));
-      p.addEventListener('input', function(){ it.p = p.value; update(); });
+      p.addEventListener('focus', function(){
+        if (it.sp) { it.sp = false; it.p = ''; p.value = ''; p.classList.remove('is-sample'); update(); }
+      });
+      p.addEventListener('input', function(){ it.sp = false; p.classList.remove('is-sample'); it.p = p.value; update(); });
 
       var x = document.createElement('button');
       x.type = 'button'; x.className = 'icon-btn'; x.textContent = '\u00d7';
@@ -876,6 +911,7 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
     $('invNumber').value = rec.number || '';
     $('clientName').value = rec.client || '';
     $('clientAddress').value = rec.clientAddress || '';
+    unmark(['clientName', 'clientAddress']);
     $('invDate').value = rec.date || '';
     $('invDue').value = rec.due || '';
     $('discVal').value = rec.discVal || 0;
@@ -984,18 +1020,29 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
   setDates();
   $('clientName').value = 'PT Maju Bersama';
   $('clientAddress').value = 'Jl. Contoh Raya No. 88, Jakarta';
+  function sampleItem(d, q, p){
+    return {d:d, q:q, p:p, sd:true, sq:true, sp:true, hd:d, hq:String(q), hp:String(p)};
+  }
   items = [
-    {d:'Desain logo dan panduan merek', q:1, p:2500000},
-    {d:'Revisi tambahan', q:2, p:350000},
-    {d:'Kemasan digital (3 format)', q:1, p:750000}
+    sampleItem('Desain logo dan panduan merek', 1, 2500000),
+    sampleItem('Revisi tambahan', 2, 350000),
+    sampleItem('Kemasan digital (3 format)', 1, 750000)
   ];
+  markSamples();
   renderRows();
   renderHistory();
   renderProducts();
 
   FIELD_IDS.forEach(function(id){
     var el = $(id);
-    el.addEventListener('input', update);
+    el.addEventListener('focus', function(){
+      if (el.classList.contains('is-sample')) {
+        el.value = '';
+        el.classList.remove('is-sample');
+        update();
+      }
+    });
+    el.addEventListener('input', function(){ el.classList.remove('is-sample'); update(); });
     el.addEventListener('change', update);
   });
 
@@ -1023,6 +1070,7 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
     setDates();
     $('clientName').value = '';
     $('clientAddress').value = '';
+    unmark(['clientName', 'clientAddress']);
     $('discVal').value = 0;
     $('taxRate').value = 0;
     items = [{d:'', q:1, p:''}];
@@ -1034,6 +1082,7 @@ details p{margin:0 0 14px;color:var(--muted);max-width:64ch}
   $('btnReset').addEventListener('click', function(){
     clearProfile();
     applyProfile(SAMPLE);
+    markSamples();
     update();
     say('Data usaha tersimpan telah dihapus.');
   });
